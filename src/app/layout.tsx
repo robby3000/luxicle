@@ -1,9 +1,10 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+// import { getServerSession } from 'next-auth/next'; // Replaced by Supabase
+// import { authOptions } from '@/lib/auth'; // Replaced by Supabase
 import { Providers } from '@/providers';
 import Link from 'next/link';
+import AuthStatus from '@/components/auth/AuthStatus'; // Added AuthStatus import
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -11,19 +12,24 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Luxicle - Creative Challenges for Makers',
   description: 'A privacy-first social platform for creators to participate in monthly creative challenges',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#ffffff' },
     { media: '(prefers-color-scheme: dark)', color: '#0f172a' },
   ],
 };
 
-export default async function RootLayout({
+export default function RootLayout({ // Changed to non-async as getServerSession is removed
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
+  // const session = await getServerSession(authOptions); // Replaced by AuthStatus component
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -40,19 +46,7 @@ export default async function RootLayout({
                   </ul>
                 </nav>
                 <div className="flex items-center space-x-4">
-                  {!session ? (
-                    <>
-                      <Link href="/login" className="hover:underline">Log in</Link>
-                      <Link 
-                        href="/register" 
-                        className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90"
-                      >
-                        Sign up
-                      </Link>
-                    </>
-                  ) : (
-                    <Link href="/dashboard" className="hover:underline">Dashboard</Link>
-                  )}
+                  <AuthStatus />
                 </div>
               </div>
             </header>

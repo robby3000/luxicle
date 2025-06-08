@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -13,13 +13,37 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // First check if user is already logged in on initial load
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { createSupabaseBrowserClient } = await import('@/lib/supabase/client');
+        const supabase = createSupabaseBrowserClient();
+        const { data } = await supabase.auth.getSession();
+
+        // If user already has a session, redirect to home
+        if (data?.session) {
+          console.log('User already logged in, redirecting to home');
+          router.push('/');
+        }
+      } catch (err) {
+        console.error('Error checking authentication status:', err);
+      }
+    };
+
+    checkAuth();
+  }, [router]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
+    setIsProcessing(true);
     setError(null);
 
     try {
+      // 1. Submit credentials to server API
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -32,16 +56,33 @@ export default function LoginPage() {
 
       if (!response.ok) {
         setError(data.error || 'Login failed. Please check your credentials.');
+        setIsProcessing(false);
       } else {
-        // Login successful, Supabase session cookie is set by the server
-        // Redirect to a protected page or dashboard
-        router.push('/'); // Or '/dashboard'
-        // You might want to refresh the page or use Supabase client to update auth state
-        router.refresh(); // This helps Next.js re-evaluate server components with new auth state
+        // 2. On success, directly set the session in the client
+        const { createSupabaseBrowserClient } = await import('@/lib/supabase/client');
+        const supabase = createSupabaseBrowserClient();
+        
+        // 3. Force reload the session from cookies
+        await supabase.auth.getSession();
+        
+        // 4. Set the session programmatically using the data we got back
+        if (data.session) {
+          // This explicitly sets the session in the client browser
+          await supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token
+          });
+          
+          console.log('Auth session set successfully');
+        }
+        
+        // 5. Do a full-page refresh to ensure clean state
+        window.location.href = '/';
       }
     } catch (err) {
       console.error('Login request failed:', err);
       setError('An unexpected error occurred. Please try again.');
+      setIsProcessing(false);
     }
 
     setIsLoading(false);

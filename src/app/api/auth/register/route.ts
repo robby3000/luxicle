@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers'; // Import cookies
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function POST(request: Request) {
-  const supabase = await createSupabaseServerClient();
+  try {
+  const cookieStore = await cookies(); // Await to get the resolved cookie store
+  const supabase = createSupabaseServerClient(cookieStore); // Pass resolved cookieStore; function is sync
   let requestData;
   try {
     requestData = await request.json();
@@ -103,4 +106,22 @@ export async function POST(request: Request) {
 
   // Fallback for unexpected scenarios, though Supabase usually returns a user or an error.
   return NextResponse.json({ message: 'Registration process initiated.' }, { status: 202 });
+  } catch (e: any) {
+    console.error('Global error in /api/auth/register:', e);
+    // Ensure a JSON response even for unexpected errors
+    let errorMessage = 'An unexpected server error occurred.';
+    let errorDetails = e.message || String(e);
+
+    // Check if it's a Supabase AuthApiError for more specific details if safe
+    if (e && typeof e === 'object' && 'status' in e && typeof e.status === 'number') {
+        // Potentially a Supabase AuthApiError or similar structured error
+        errorMessage = e.message || errorMessage;
+        // You might want to be careful about exposing all details from e directly
+    }
+
+    return NextResponse.json(
+      { error: errorMessage, details: errorDetails }, 
+      { status: (e && typeof e === 'object' && 'status' in e && typeof e.status === 'number') ? e.status : 500 }
+    );
+  }
 }

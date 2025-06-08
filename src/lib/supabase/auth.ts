@@ -1,5 +1,4 @@
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
 import type { Database } from '@/lib/supabase/types';
 import type {
   AuthError,
@@ -57,8 +56,24 @@ export async function signOut(): Promise<{ error: AuthError | null }> {
 
 /**
  * Gets the current authenticated user (client-side).
+ * First tries to get the user from the session, then falls back to getUser()
+ * This provides better reliability during initial page loads after authentication.
  */
 export async function getCurrentUser(): Promise<User | null> {
+  // First try to get the session, which may be more reliable immediately after auth state changes
+  const { data: sessionData, error: sessionError } = await supabaseBrowserClient.auth.getSession();
+  
+  // If we have a valid session with a user, return that user
+  if (sessionData?.session?.user) {
+    return sessionData.session.user;
+  }
+  
+  // If there was an error getting the session or no user was found, try getUser() as fallback
+  if (sessionError) {
+    console.log('Session retrieval error, falling back to getUser():', sessionError.message);
+  }
+  
+  // Fall back to getUser()
   const { data, error } = await supabaseBrowserClient.auth.getUser();
   if (error) {
     console.error('Error getting current user:', error.message);
@@ -74,37 +89,6 @@ export async function getCurrentSession(): Promise<Session | null> {
   const { data, error } = await supabaseBrowserClient.auth.getSession();
   if (error) {
     console.error('Error getting current session:', error.message);
-    return null;
-  }
-  return data.session;
-}
-
-// --- Server-side Auth Helpers ---
-
-/**
- * Gets the current authenticated user (server-side, e.g., in Route Handlers or Server Components).
- * Requires cookieStore from Next.js 'next/headers'.
- */
-export async function getCurrentUserServer(): Promise<User | null> {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.getUser();
-  if (error) {
-    // It's common for this to error if no user is logged in, so might not always be a console error.
-    // console.error('Server: Error getting current user:', error.message);
-    return null;
-  }
-  return data.user;
-}
-
-/**
- * Gets the current session (server-side, e.g., in Route Handlers or Server Components).
- * Requires cookieStore from Next.js 'next/headers'.
- */
-export async function getCurrentSessionServer(): Promise<Session | null> {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.getSession();
-  if (error) {
-    // console.error('Server: Error getting current session:', error.message);
     return null;
   }
   return data.session;
