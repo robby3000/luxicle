@@ -51,34 +51,111 @@ Luxicle is a privacy-first social platform designed for creators to participate 
 
 ### Local Development
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-username/luxicle.git
-   cd luxicle
-   ```
+1.  Clone the repository:
+    ```bash
+    git clone https://github.com/robby3000/luxicle.git # Ensure this is your correct repo URL
+    cd luxicle
+    ```
 
-2. Install dependencies:
-   ```bash
-   npm install
-   # or
-   yarn install
-   ```
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
 
-3. Set up environment variables:
-   Create a `.env.local` file in the root directory and add the following:
-   ```env
-   NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-   ```
+3.  Set up environment variables:
+    Create a `.env.local` file in the root directory and add your Supabase credentials:
+    ```env
+    NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+    # Add any other necessary environment variables (e.g., for NextAuth)
+    ```
 
-4. Run the development server:
-   ```bash
-   npm run dev
-   # or
-   yarn dev
-   ```
+4.  Run the development server:
+    ```bash
+    npm run dev
+    ```
+    Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+5.  Linting and Formatting:
+    The project is set up with ESLint and Prettier.
+    ```bash
+    npm run lint          # Check for linting errors
+    npm run lint:fix      # Automatically fix linting errors
+    npm run format        # Format code with Prettier
+    npm run format:check  # Check if code is formatted correctly
+    ```
+
+## UI Components
+
+This project uses a custom UI component library built with Radix UI primitives and styled with Tailwind CSS. Components are located in `@/components/ui`.
+
+### Key Components & Usage
+
+**Button:**
+
+```tsx
+import { Button } from '@/components/ui/button';
+
+<Button variant="primary" size="lg" onClick={() => console.log('Clicked!')}>
+  Primary Button
+</Button>
+```
+Props: `variant`, `size`, `asChild`, standard button props.
+
+**Input:**
+
+```tsx
+import { Input } from '@/components/ui/input';
+
+<Input type="email" placeholder="Enter your email" />
+```
+Props: Standard input props.
+
+**Checkbox:**
+
+```tsx
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+
+<div className="flex items-center space-x-2">
+  <Checkbox id="terms" />
+  <Label htmlFor="terms">Accept terms and conditions</Label>
+</div>
+```
+Props: Standard checkbox props.
+
+**Label:**
+
+```tsx
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input'; // Assuming Input is used with Label
+
+<Label htmlFor="username">Username</Label>
+<Input id="username" />
+```
+Props: Standard label props.
+
+**Toast:**
+
+To use toasts, ensure `ToastProvider` is wrapping your application (typically in `providers.tsx`).
+
+```tsx
+import { useToast } from '@/components/ui'; // or '@/components/ui/toast'
+
+// In a component:
+const { toast } = useToast();
+
+toast({
+  title: 'Success!',
+  description: 'Your profile has been updated.',
+  type: 'success', // 'default', 'success', 'error', 'warning', 'info'
+  duration: 5000, // Optional, defaults to 5 seconds
+  action: { // Optional
+    label: 'Undo',
+    onClick: () => console.log('Undo action'),
+  },
+});
+```
 
 ## Database Schema
 
