@@ -25,10 +25,10 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async session({ token, session }) {
       if (token) {
-        session.user.id = token.id
-        session.user.name = token.name
-        session.user.email = token.email
-        session.user.image = token.picture
+        session.user.id = token.id as string ?? ''; // Assuming token.id is the primary concern for string type
+        session.user.name = token.name as string ?? null; // Or token.name as string ?? '' depending on type
+        session.user.email = token.email as string ?? '';
+        session.user.image = token.picture as string ?? null; // Or token.picture as string ?? ''
       }
 
       return session
