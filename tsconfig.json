@@ -20,11 +20,7 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@/lib/*": ["./src/lib/*"],
-      "@/components/*": ["./src/components/*"],
-      "@/types/*": ["./src/types/*"],
-      "@/app/*": ["./src/app/*"]
+      "@/*": ["./src/*"]
     },
     "typeRoots": ["./node_modules/@types", "./src/types"]
   },

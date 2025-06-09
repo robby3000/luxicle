@@ -576,6 +576,25 @@ export type CompositeTypes<
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
+
+// Explicit type exports for easier consumption
+export type Challenge = Database['public']['Tables']['challenges']['Row'];
+export type ChallengeInsert = Database['public']['Tables']['challenges']['Insert'];
+export type ChallengeUpdate = Database['public']['Tables']['challenges']['Update'];
+
+export type Category = Database['public']['Tables']['categories']['Row'];
+export type CategoryInsert = Database['public']['Tables']['categories']['Insert'];
+export type CategoryUpdate = Database['public']['Tables']['categories']['Update'];
+
+export type Tag = Database['public']['Tables']['tags']['Row'];
+export type TagInsert = Database['public']['Tables']['tags']['Insert'];
+export type TagUpdate = Database['public']['Tables']['tags']['Update'];
+
+// Add other table types as needed, e.g.:
+// export type Profile = Database['public']['Tables']['profiles']['Row'];
+// export type Luxicle = Database['public']['Tables']['luxicles']['Row'];
+// export type Submission = Database['public']['Tables']['submissions']['Row'];
+
 export const Constants = {
   public: {
     Enums: {},

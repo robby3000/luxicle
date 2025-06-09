@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { cookies } from 'next/headers';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 // This route handles the callback from Supabase after OAuth authentication.
@@ -15,7 +16,8 @@ export async function GET(request: NextRequest) {
     // Supabase's client-side library or middleware typically handles session establishment
     // when the user is redirected back to the app. 
     // For server-side code exchange (if needed, though often not for simple redirects):
-    const supabase = await createSupabaseServerClient();
+    const cookieStore = cookies();
+    const supabase = createSupabaseServerClient(cookieStore as any);
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
       console.error('Supabase OAuth code exchange error:', error);

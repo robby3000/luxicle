@@ -49,6 +49,24 @@ Luxicle is a privacy-first social platform designed for creators to participate 
 - Supabase account
 - Vercel account (for deployment)
 
+### Supabase Configuration
+
+This project uses a **remote Supabase instance** for development and production. Local Supabase setup is not required or recommended.
+
+1. Create a project in the [Supabase Dashboard](https://app.supabase.com/)
+2. Copy your project's API URL and keys
+3. Setup your environment variables (see below)
+4. Run the migration scripts in the Supabase dashboard SQL editor
+   - The migration files can be found in `supabase/migrations/`
+5. Run the seed script (optional):
+   ```bash
+   # First set up your .env.local file with your Supabase credentials
+   # Then run:
+   npm run db:seed
+   # or
+   yarn db:seed
+   ```
+
 ### Local Development
 
 1.  Clone the repository:
