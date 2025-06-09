@@ -27,6 +27,8 @@ type ChallengeFiltersProps = {
   onTagsChange: (tags: string[]) => void;
 };
 
+const ALL_CATEGORIES_VALUE = "__ALL_CATEGORIES__";
+
 const ChallengeFilters: React.FC<ChallengeFiltersProps> = ({
   categories,
   tags,
@@ -75,16 +77,16 @@ const ChallengeFilters: React.FC<ChallengeFiltersProps> = ({
         <div className="space-y-2">
           <Label htmlFor="category-filter">Category</Label>
           <Select
-            value={selectedCategory || ''}
-            onValueChange={(value) => onCategoryChange(value || null)}
+            value={selectedCategory === null ? ALL_CATEGORIES_VALUE : selectedCategory}
+            onValueChange={(value) => onCategoryChange(value === ALL_CATEGORIES_VALUE ? null : value)}
           >
             <SelectTrigger id="category-filter">
               <SelectValue placeholder="All categories" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All categories</SelectItem>
+              <SelectItem value={ALL_CATEGORIES_VALUE}>All categories</SelectItem>
               {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id}>
+                <SelectItem key={category.id} value={category.id.toString()}>
                   {category.name}
                 </SelectItem>
               ))}

@@ -102,7 +102,7 @@ export default function AuthStatus() {
       ) : (
         <>
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/auth/login">Login</Link>
+            <Link href="/login">Login</Link>
           </Button>
           <Button variant="default" size="sm" asChild>
             <Link href="/auth/register">Register</Link>

@@ -67,37 +67,62 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (data: LoginFormData) => {
+    console.log('[LoginPage] onSubmit triggered with data:', data);
     setIsLoading(true);
+    let signInError: string | null = null;
+
     try {
       const result = await signIn('credentials', {
         redirect: false,
         email: data.email,
         password: data.password,
-        callbackUrl,
+        // callbackUrl, // Passing callbackUrl here can sometimes interfere with error handling
       });
 
+      console.log('[LoginPage] signIn result:', result);
+
+      if (result?.ok) {
+        // Successful sign-in
+        console.log('[LoginPage] signIn successful. Redirecting to:', callbackUrl);
+        router.push(callbackUrl); // Use the callbackUrl determined earlier
+        router.refresh(); // Important for server components to re-fetch session
+        // No need to setIsLoading(false) here if navigating away, but good practice if navigation could fail client-side
+        return; // Exit early on success
+      }
+
+      // If not ok, there should be an error
       if (result?.error) {
-        throw new Error(result.error);
+        console.warn('[LoginPage] signIn error:', result.error);
+        if (result.error === 'CredentialsSignin') {
+          signInError = 'Invalid email or password. Please check your credentials and try again.';
+        } else if (result.error === 'Callback') {
+          // This can happen if there's an issue in the authorize function (e.g., throwing an error)
+          // or if the user object returned from authorize is invalid.
+          signInError = 'Login failed. There might be an issue with your account or server configuration.';
+        } else {
+          signInError = `Login attempt failed: ${result.error}`;
+        }
+      } else {
+        // No error, but not ok. This is an unexpected state.
+        console.error('[LoginPage] signIn returned !ok without an error.');
+        signInError = 'An unexpected issue occurred during login. Please try again.';
       }
-
-      if (result?.url) {
-        router.push(callbackUrl);
-        router.refresh();
-      }
-    } catch (error) {
-      setError('root', {
-        type: 'manual',
-        message: 'Invalid email or password',
-      });
+    } catch (error: any) { // Catch errors from the await signIn call itself (e.g., network issues)
+      console.error('[LoginPage] Exception during signIn call:', error);
+      signInError = error.message || 'A network or unexpected error occurred. Please try again.';
+    }
+          // If we reached here, login failed or an error occurred
+    if (signInError) {
+      setError('root', { type: 'manual', message: signInError });
       toast({
-        title: 'Error',
-        description: 'Invalid email or password',
+        title: 'Login Failed',
+        description: signInError,
         variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
     }
+    setIsLoading(false); // Ensure loading is set to false on any failure path
   };
+
 
   const handleOAuthSignIn = async (provider: 'google' | 'github') => {
     try {
@@ -119,6 +144,7 @@ export default function LoginPage() {
       setIsGithubLoading(false);
     }
   };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
       <div className="w-full max-w-md space-y-8 rounded-lg bg-card p-8 shadow-lg">
@@ -251,8 +277,10 @@ export default function LoginPage() {
               </>
             )}
           </Button>
+
         </div>
       </div>
     </div>
   );
 }
+

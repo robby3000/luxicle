@@ -58,31 +58,9 @@ export async function middleware(req: NextRequest) {
   let res = NextResponse.next();
   const supabase = createSupabaseMiddlewareClient(req, res);
 
-  const { data: { session } } = await supabase.auth.getSession();
-
-  const { pathname } = req.nextUrl;
-
-  // Define protected routes
-  const protectedRoutes = ['/dashboard']; // Add any routes you want to protect
-
-  // If user is not authenticated and trying to access a protected route
-  if (!session && protectedRoutes.some(route => pathname.startsWith(route))) {
-    const redirectUrl = req.nextUrl.clone();
-    redirectUrl.pathname = '/auth/login';
-    redirectUrl.searchParams.set('next', pathname); // Optionally redirect back after login
-    return NextResponse.redirect(redirectUrl);
-  }
-
-  // If user is authenticated and trying to access login/register, redirect to dashboard or home
-  if (session && (pathname.startsWith('/auth/login') || pathname.startsWith('/auth/register'))) {
-    const redirectUrl = req.nextUrl.clone();
-    redirectUrl.pathname = '/dashboard'; // Or '/' for homepage
-    return NextResponse.redirect(redirectUrl);
-  }
-  
-  // Refresh session if expired - important for server-side rendering
-  // This is generally handled by Supabase client, but an explicit getSession can help ensure it's fresh.
-  // The getSession call above already does this.
+  // This is to ensure the Supabase session is refreshed if it exists.
+  // The actual route protection will be handled by NextAuth.js in the layout.
+  await supabase.auth.getSession();
 
   return res;
 }
