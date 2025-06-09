@@ -5,9 +5,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
-import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 // TODO: Uncomment and ensure these components exist in your project
 // import { Button } from '@/components/ui/button';
@@ -72,46 +72,41 @@ export default function LoginPage() {
     let signInError: string | null = null;
 
     try {
-      const result = await signIn('credentials', {
-        redirect: false,
+      const supabase = createSupabaseBrowserClient();
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
-        // callbackUrl, // Passing callbackUrl here can sometimes interfere with error handling
       });
 
-      console.log('[LoginPage] signIn result:', result);
+      console.log('[LoginPage] signIn result:', authData ? 'success' : 'failed');
 
-      if (result?.ok) {
+      if (authData?.session) {
         // Successful sign-in
         console.log('[LoginPage] signIn successful. Redirecting to:', callbackUrl);
         router.push(callbackUrl); // Use the callbackUrl determined earlier
         router.refresh(); // Important for server components to re-fetch session
-        // No need to setIsLoading(false) here if navigating away, but good practice if navigation could fail client-side
         return; // Exit early on success
       }
 
-      // If not ok, there should be an error
-      if (result?.error) {
-        console.warn('[LoginPage] signIn error:', result.error);
-        if (result.error === 'CredentialsSignin') {
+      // If we got here, there should be an error
+      if (error) {
+        console.warn('[LoginPage] signIn error:', error);
+        if (error.message.includes('Invalid login credentials')) {
           signInError = 'Invalid email or password. Please check your credentials and try again.';
-        } else if (result.error === 'Callback') {
-          // This can happen if there's an issue in the authorize function (e.g., throwing an error)
-          // or if the user object returned from authorize is invalid.
-          signInError = 'Login failed. There might be an issue with your account or server configuration.';
         } else {
-          signInError = `Login attempt failed: ${result.error}`;
+          signInError = `Login attempt failed: ${error.message}`;
         }
       } else {
-        // No error, but not ok. This is an unexpected state.
-        console.error('[LoginPage] signIn returned !ok without an error.');
+        // No error, but no session. This is an unexpected state.
+        console.error('[LoginPage] signIn returned no session without an error.');
         signInError = 'An unexpected issue occurred during login. Please try again.';
       }
-    } catch (error: any) { // Catch errors from the await signIn call itself (e.g., network issues)
+    } catch (error: any) { // Catch errors from the await supabase.auth call itself (e.g., network issues)
       console.error('[LoginPage] Exception during signIn call:', error);
       signInError = error.message || 'A network or unexpected error occurred. Please try again.';
     }
-          // If we reached here, login failed or an error occurred
+
+    // If we reached here, login failed or an error occurred
     if (signInError) {
       setError('root', { type: 'manual', message: signInError });
       toast({
@@ -132,14 +127,28 @@ export default function LoginPage() {
         setIsGithubLoading(true);
       }
 
-      await signIn(provider, { callbackUrl });
-    } catch (error) {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${callbackUrl}`,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // The OAuth flow will redirect the user, no need to do anything else here
+    } catch (error: any) {
+      console.error(`[LoginPage] OAuth sign-in error with ${provider}:`, error);
       toast({
         title: 'Error',
-        description: 'An error occurred while signing in',
+        description: error.message || 'An error occurred while signing in',
         variant: 'destructive',
       });
-    } finally {
+      
+      // Reset loading state in case the redirect doesn't happen
       setIsGoogleLoading(false);
       setIsGithubLoading(false);
     }

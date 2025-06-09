@@ -5,9 +5,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
-import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 // TODO: Uncomment and ensure these components exist in your project
 // import { Button } from '@/components/ui/button';
@@ -100,35 +100,40 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
     try {
-      // Here you would typically make an API call to register the user
-      // For example:
-      // const response = await fetch('/api/auth/register', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(data),
-      // });
-      // const result = await response.json();
-      // if (!response.ok) throw new Error(result.message || 'Registration failed');
+      // Register the user with Supabase Auth
+      const supabase = createSupabaseBrowserClient();
       
-      // For now, we'll simulate a successful registration
-      console.log('Registration data:', data);
-      
-      // Sign in the user after successful registration
-      const result = await signIn('credentials', {
-        redirect: false,
+      // Register the user
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
-        callbackUrl,
+        options: {
+          data: {
+            first_name: data.firstName,
+            last_name: data.lastName,
+            full_name: `${data.firstName} ${data.lastName}`,
+          }
+        }
       });
 
-      if (result?.error) {
-        throw new Error(result.error);
+      if (signUpError) {
+        throw new Error(signUpError.message);
       }
 
-      if (result?.url) {
-        router.push(callbackUrl);
-        router.refresh();
+      // Check if email confirmation is required
+      if (!authData.session) {
+        toast({
+          title: 'Success',
+          description: 'Please check your email to confirm your registration',
+          variant: 'default',
+        });
+        router.push('/login'); // Redirect to login page
+        return;
       }
+      
+      // If email confirmation is not required and we got a session, redirect
+      router.push(callbackUrl);
+      router.refresh();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Registration failed';
       setError('root', {
@@ -153,14 +158,28 @@ export default function RegisterPage() {
         setIsGithubLoading(true);
       }
 
-      await signIn(provider, { callbackUrl });
-    } catch (error) {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${callbackUrl}`,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // The OAuth flow will redirect the user, no need to do anything else here
+    } catch (error: any) {
+      console.error(`[RegisterPage] OAuth sign-in error with ${provider}:`, error);
       toast({
         title: 'Error',
-        description: 'An error occurred while signing in',
+        description: error.message || 'An error occurred while signing in',
         variant: 'destructive',
       });
-    } finally {
+      
+      // Reset loading state in case the redirect doesn't happen
       setIsGoogleLoading(false);
       setIsGithubLoading(false);
     }
