@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import Image from "next/image";
 import { User } from "@supabase/supabase-js";
+import { useAuth } from '@/hooks/useAuth'; // Import useAuth
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ interface HeaderProps {
 }
 
 export function Header({ user }: HeaderProps) {
+  const { signOut } = useAuth(); // Get signOut function
   const pathname = usePathname();
 
   const navigation = [
@@ -38,7 +40,7 @@ export function Header({ user }: HeaderProps) {
   const userNavigation = [
     { name: "Profile", href: "/profile", icon: UserIcon },
     { name: "Settings", href: "/settings", icon: Settings },
-    { name: "Sign out", href: "/api/auth/signout", icon: LogOut },
+    { name: "Sign out", action: "signout", icon: LogOut }, // Changed href to action identifier
   ];
 
   // Get current username from user metadata if available
@@ -111,14 +113,24 @@ export function Header({ user }: HeaderProps) {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {userNavigation.map((item) => (
-                    <DropdownMenuItem key={item.name} asChild>
-                      <Link href={item.href} className="flex items-center">
-                        <item.icon className="mr-2 h-4 w-4" />
-                        <span>{item.name}</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
+                  {userNavigation.map((item) => {
+                    if (item.action === 'signout') {
+                      return (
+                        <DropdownMenuItem key={item.name} onSelect={async () => await signOut()} className="cursor-pointer">
+                          <item.icon className="mr-2 h-4 w-4" />
+                          <span>{item.name}</span>
+                        </DropdownMenuItem>
+                      );
+                    }
+                    return (
+                      <DropdownMenuItem key={item.name} asChild>
+                        <Link href={item.href!} className="flex items-center"> {/* Added non-null assertion for href for non-signout items */}
+                          <item.icon className="mr-2 h-4 w-4" />
+                          <span>{item.name}</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    );
+                  })}
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
@@ -127,7 +139,7 @@ export function Header({ user }: HeaderProps) {
                   <Link href="/login">Sign in</Link>
                 </Button>
                 <Button size="sm" asChild>
-                  <Link href="/signup">Sign up</Link>
+                  <Link href="/register">Sign up</Link>
                 </Button>
               </div>
             )}

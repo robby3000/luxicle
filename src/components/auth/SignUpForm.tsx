@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
@@ -35,6 +35,7 @@ export function SignUpForm({ callbackUrl = '/' }: SignUpFormProps) {
   const {
     register,
     handleSubmit,
+    control, // Add control
     formState: { errors },
     setError: setFormError,
   } = useForm<RegisterFormData>({
@@ -45,6 +46,10 @@ export function SignUpForm({ callbackUrl = '/' }: SignUpFormProps) {
   });
 
   const onSubmit = async (data: RegisterFormData) => {
+    console.log('[SignUpForm] onSubmit triggered. Data:', data);
+    // Clear previous root errors if any
+    setFormError('root', { message: '' });
+    console.log('[SignUpForm] Calling signUpWithEmail...');
     const result = await signUpWithEmail({
       email: data.email,
       password: data.password,
@@ -52,10 +57,12 @@ export function SignUpForm({ callbackUrl = '/' }: SignUpFormProps) {
         data: {
           first_name: data.firstName,
           last_name: data.lastName,
+          username: data.username, // Add username
         },
       },
     });
 
+    console.log('[SignUpForm] signUpWithEmail result:', result);
     if (result.error) {
       setFormError('root', { type: 'manual', message: result.error.message });
       toast({
@@ -122,23 +129,28 @@ export function SignUpForm({ callbackUrl = '/' }: SignUpFormProps) {
       )}
       <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
         <div>
-          <Label htmlFor="firstName" className="mb-1">First name</Label>
+          <Label htmlFor="firstName" className="mb-1">First name (Optional)</Label>
           <Input id="firstName" {...register('firstName')} disabled={isLoading} placeholder="John" />
           {errors.firstName && <p className="mt-1 text-sm text-destructive">{errors.firstName.message}</p>}
         </div>
         <div>
-          <Label htmlFor="lastName" className="mb-1">Last name</Label>
+          <Label htmlFor="lastName" className="mb-1">Last name (Optional)</Label>
           <Input id="lastName" {...register('lastName')} disabled={isLoading} placeholder="Doe" />
           {errors.lastName && <p className="mt-1 text-sm text-destructive">{errors.lastName.message}</p>}
         </div>
       </div>
       <div>
-        <Label htmlFor="email" className="mb-1">Email address</Label>
+        <Label htmlFor="username" className="mb-1">Username <span className="text-destructive">*</span></Label>
+        <Input id="username" {...register('username')} disabled={isLoading} placeholder="your_username" autoComplete="username" />
+        {errors.username && <p className="mt-1 text-sm text-destructive">{errors.username.message}</p>}
+      </div>
+      <div>
+        <Label htmlFor="email" className="mb-1">Email address <span className="text-destructive">*</span></Label>
         <Input id="email" type="email" autoComplete="email" {...register('email')} disabled={isLoading} placeholder="name@example.com" />
         {errors.email && <p className="mt-1 text-sm text-destructive">{errors.email.message}</p>}
       </div>
       <div>
-        <Label htmlFor="password" className="mb-1">Password</Label>
+        <Label htmlFor="password" className="mb-1">Password <span className="text-destructive">*</span></Label>
         <Input id="password" type="password" autoComplete="new-password" {...register('password')} disabled={isLoading} placeholder="••••••••" />
         {errors.password ? (
             <p className="mt-1 text-sm text-destructive">{errors.password.message}</p>
@@ -147,30 +159,50 @@ export function SignUpForm({ callbackUrl = '/' }: SignUpFormProps) {
         )}
       </div>
       <div>
-        <Label htmlFor="confirmPassword" className="mb-1">Confirm Password</Label>
+        <Label htmlFor="confirmPassword" className="mb-1">Confirm Password <span className="text-destructive">*</span></Label>
         <Input id="confirmPassword" type="password" autoComplete="new-password" {...register('confirmPassword')} disabled={isLoading} placeholder="••••••••" />
         {errors.confirmPassword && <p className="mt-1 text-sm text-destructive">{errors.confirmPassword.message}</p>}
       </div>
 
-      <div className="items-top flex space-x-2">
-        <Checkbox id="terms" {...register('terms')} disabled={isLoading} />
-        <div className="grid gap-1.5 leading-none">
-            <Label
-            htmlFor="terms"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-            I agree to the{' '}
-            <Link href="/terms" className="text-primary hover:underline">
-                Terms of Service
-            </Link>{' '}
-            and{' '}
-            <Link href="/privacy" className="text-primary hover:underline">
-                Privacy Policy
-            </Link>
-            </Label>
-            {errors.terms && <p className="text-sm text-destructive">{errors.terms.message}</p>}
-        </div>
+      <div className="space-y-2">
+        <p className="text-xs text-muted-foreground">
+          Your First Name, Last Name, and Email Address will NOT appear on your profile or anywhere on the website.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          We will not sell your information or use any cookies or other technologies for tracking users beyond what is strictly necessary for site functionality.
+        </p>
       </div>
+
+      <Controller
+        control={control}
+        name="terms"
+        render={({ field }) => (
+          <div className="items-top flex space-x-2">
+            <Checkbox
+              id="terms"
+              checked={field.value}
+              onCheckedChange={field.onChange}
+              disabled={isLoading}
+            />
+            <div className="grid gap-1.5 leading-none">
+              <Label
+                htmlFor="terms"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                I agree to the{' '}
+                <Link href="/terms" className="text-primary hover:underline">
+                  Terms of Service
+                </Link>{' '}
+                and{' '}
+                <Link href="/privacy" className="text-primary hover:underline">
+                  Privacy Policy
+                </Link>
+              </Label>
+              {errors.terms && <p className="text-sm text-destructive">{errors.terms.message}</p>}
+            </div>
+          </div>
+        )}
+      />
 
       <Button type="submit" className="w-full" disabled={isLoading}>
         {(authIsLoading && !isGoogleLoading && !isGithubLoading) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

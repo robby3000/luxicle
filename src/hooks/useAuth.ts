@@ -88,15 +88,15 @@ export const useAuth = () => {
         if (signUpError) throw signUpError;
         // Supabase signUp might return a user/session if email confirmation is disabled,
         // or just a user if confirmation is required.
-        // For now, we assume successful signUp means user needs to confirm email,
-        // so we don't automatically set user/session here unless explicitly returned and active.
         // The onAuthStateChange listener will pick up the user once confirmed and logged in.
         if (data.user && data.session) { // User is active immediately (e.g. auto-confirm enabled)
             setUserAndSession(data.user, data.session);
         } else if (data.user && !data.session) { // User created, awaiting confirmation
-            // Optionally set user if you want to show "pending confirmation" state
-            // setUserAndSession(data.user, null); 
+            // Set user in store so email is available for resend confirmation page
+            setUserAndSession(data.user, null); 
         }
+        // If only data.user is present (confirmation needed), we still return it.
+        // If neither (e.g. error before user creation), they will be null.
         return { user: data.user, session: data.session, error: null };
       } catch (e: any) {
         setError(e);
@@ -149,6 +149,58 @@ export const useAuth = () => {
       setLoading(false);
     }
   }, [setLoading, setError, clearAuth]);
+
+  const resendConfirmationEmail = useCallback(
+    async (email: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { error: resendError } = await supabase.auth.resend({
+          type: 'signup',
+          email: email,
+        });
+        if (resendError) throw resendError;
+        return { error: null };
+      } catch (e: any) {
+        setError(e);
+        // Re-throw to allow form/component to handle it, e.g., show a toast
+        // Or return { error: e } if preferred pattern
+        throw e; 
+      } finally {
+        setLoading(false);
+      }
+    },
+    [setLoading, setError]
+  );
+
+  const resetUserPassword = useCallback(
+    async (newPassword: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        // The user should be logged in at this point via the recovery link
+        // Supabase client automatically uses the current session to update the user
+        const { data, error: updateError } = await supabase.auth.updateUser({
+          password: newPassword,
+        });
+        if (updateError) throw updateError;
+        // Password updated successfully. 
+        // The onAuthStateChange listener might pick up user changes if any, 
+        // or session might be invalidated, requiring re-login.
+        // For now, we assume success means the user can log in with the new password.
+        // Optionally, sign out the user here to force re-login:
+        // await supabase.auth.signOut();
+        // clearAuth();
+        return { user: data.user, error: null };
+      } catch (e: any) {
+        setError(e);
+        throw e; // Re-throw for the form to handle
+      } finally {
+        setLoading(false);
+      }
+    },
+    [setLoading, setError, clearAuth] // Added clearAuth if we decide to signOut
+  );
   
   const sendPasswordResetEmail = useCallback(
     async (email: string, redirectTo?: string) => {
@@ -179,5 +231,7 @@ export const useAuth = () => {
     signInWithOAuth,
     signOut,
     sendPasswordResetEmail,
+    resendConfirmationEmail,
+    resetUserPassword,
   };
 };
