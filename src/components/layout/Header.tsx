@@ -28,7 +28,6 @@ interface HeaderProps {
 
 export function Header({ user }: HeaderProps) {
   const pathname = usePathname();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navigation = [
     { name: "Home", href: "/", icon: Home },
@@ -42,19 +41,24 @@ export function Header({ user }: HeaderProps) {
     { name: "Sign out", href: "/api/auth/signout", icon: LogOut },
   ];
 
+  // Get current username from user metadata if available
+  const username = user?.user_metadata?.username || user?.user_metadata?.full_name || "User";
+  const hasUser = !!user;
+
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center">
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center">
-            <Link href="/" className="flex items-center space-x-2">
-              {/* Logo can be added here */}
-              <span className="font-bold text-xl">Luxicle</span>
-            </Link>
-          </div>
+      <div className="container flex h-16 items-center justify-between">
+        {/* Logo */}
+        <div className="flex items-center">
+          <Link href="/" className="flex items-center space-x-2">
+            <span className="font-bold text-xl">Luxicle</span>
+          </Link>
+        </div>
 
-          {/* Desktop navigation */}
-          <nav className="hidden md:flex items-center space-x-6">
+        {/* Navigation (visible on all screen sizes) */}
+        <div className="flex-1 flex items-center justify-end space-x-4">
+          {/* Navigation links */}
+          <nav className="flex items-center space-x-2 sm:space-x-4">
             {navigation.map((item) => {
               const Icon = item.icon;
               return (
@@ -63,9 +67,7 @@ export function Header({ user }: HeaderProps) {
                   href={item.href}
                   className={cn(
                     "flex items-center text-sm font-medium transition-colors hover:text-primary",
-                    pathname === item.href
-                      ? "text-primary"
-                      : "text-muted-foreground"
+                    pathname === item.href ? "text-primary" : "text-muted-foreground"
                   )}
                 >
                   <Icon className="h-4 w-4 mr-1" />
@@ -73,155 +75,65 @@ export function Header({ user }: HeaderProps) {
                 </Link>
               );
             })}
-            <Button asChild variant="default" size="sm">
-              <Link href="/luxicles/create">
+            
+            {/* New Luxicle button for logged in users */}
+            {hasUser && (
+              <Link 
+                href="/luxicles/create"
+                className="flex items-center text-sm font-medium transition-colors hover:text-primary text-muted-foreground"
+              >
                 <PlusCircle className="h-4 w-4 mr-1" />
                 New Luxicle
               </Link>
-            </Button>
+            )}
           </nav>
-
-          {/* Theme toggle and user menu */}
-          <div className="hidden md:flex items-center space-x-4">
+          
+          <div className="flex items-center space-x-4">
+            {/* Theme toggle */}
             <ThemeToggle />
-            {user ? (
+            
+            {/* User menu or auth buttons */}
+            {hasUser ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Button variant="ghost" className="h-8 w-8 rounded-full p-0" aria-label="User menu">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user?.user_metadata?.avatar_url || ""} alt={user?.user_metadata?.full_name || "User"} />
-                      <AvatarFallback>{(user?.user_metadata?.full_name || "User").substring(0, 2).toUpperCase()}</AvatarFallback>
+                      <AvatarImage src={user?.user_metadata?.avatar_url || ""} alt={username} />
+                      <AvatarFallback>{username.substring(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuContent className="w-56" align="end">
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user.user_metadata?.full_name || "User"}</p>
-                      <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                      <p className="text-sm font-medium leading-none">{username}</p>
+                      <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {userNavigation.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <DropdownMenuItem key={item.name} asChild>
-                        <Link href={item.href} className="flex items-center">
-                          <Icon className="mr-2 h-4 w-4" />
-                          <span>{item.name}</span>
-                        </Link>
-                      </DropdownMenuItem>
-                    );
-                  })}
+                  {userNavigation.map((item) => (
+                    <DropdownMenuItem key={item.name} asChild>
+                      <Link href={item.href} className="flex items-center">
+                        <item.icon className="mr-2 h-4 w-4" />
+                        <span>{item.name}</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <div className="flex space-x-2">
-                <Button variant="ghost" asChild>
+              <div className="flex items-center space-x-2">
+                <Button variant="ghost" size="sm" asChild>
                   <Link href="/login">Sign in</Link>
                 </Button>
-                <Button asChild>
+                <Button size="sm" asChild>
                   <Link href="/signup">Sign up</Link>
                 </Button>
               </div>
             )}
           </div>
-
-          {/* Mobile menu button */}
-          <div className="flex md:hidden">
-            <Button
-              variant="ghost"
-              className="h-10 w-10 p-0"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              <span className="sr-only">Open menu</span>
-              {isMenuOpen ? (
-                <X className="h-5 w-5" />
-              ) : (
-                <Menu className="h-5 w-5" />
-              )}
-            </Button>
-          </div>
         </div>
       </div>
-
-      {/* Mobile menu */}
-      {isMenuOpen && (
-        <div className="fixed inset-0 z-50 bg-background md:hidden">
-          <div className="container py-6 flex justify-between items-center">
-            <Link href="/" className="flex items-center space-x-2" onClick={() => setIsMenuOpen(false)}>
-              <span className="font-bold text-xl">Luxicle</span>
-            </Link>
-            <Button
-              variant="ghost"
-              className="h-10 w-10 p-0"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <span className="sr-only">Close menu</span>
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-          <nav className="container mt-6 flex flex-col space-y-4">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center py-2 text-base font-medium transition-colors hover:text-primary",
-                    pathname === item.href
-                      ? "text-primary"
-                      : "text-muted-foreground"
-                  )}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <Icon className="h-5 w-5 mr-2" />
-                  {item.name}
-                </Link>
-              );
-            })}
-            <Button asChild variant="default" className="w-full justify-start">
-              <Link href="/luxicles/create" onClick={() => setIsMenuOpen(false)}>
-                <PlusCircle className="h-5 w-5 mr-2" />
-                New Luxicle
-              </Link>
-            </Button>
-            <div className="flex items-center py-2">
-              <span className="text-base font-medium mr-auto">Theme</span>
-              <ThemeToggle />
-            </div>
-            {user ? (
-              <>
-                <div className="h-px bg-border my-2" />
-                {userNavigation.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      className="flex items-center py-2 text-base font-medium transition-colors hover:text-primary text-muted-foreground"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <Icon className="h-5 w-5 mr-2" />
-                      {item.name}
-                    </Link>
-                  );
-                })}
-              </>
-            ) : (
-              <div className="flex flex-col space-y-2 mt-2">
-                <Button variant="outline" asChild className="w-full">
-                  <Link href="/login" onClick={() => setIsMenuOpen(false)}>Sign in</Link>
-                </Button>
-                <Button asChild className="w-full">
-                  <Link href="/signup" onClick={() => setIsMenuOpen(false)}>Sign up</Link>
-                </Button>
-              </div>
-            )}
-          </nav>
-        </div>
-      )}
     </header>
   );
 }

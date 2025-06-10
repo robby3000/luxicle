@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+import { cookies } from 'next/headers';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { Providers } from '@/providers';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -22,19 +24,24 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ // Changed to non-async as getServerSession is removed
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // const session = await getServerSession(authOptions); // Replaced by AuthStatus component
-
+  // Get the user session for the header
+  const cookieStore = await cookies();
+  const supabase = createSupabaseServerClient(cookieStore as any);
+  // Use getUser instead of session.user as recommended by Supabase for better security
+  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { user } } = await supabase.auth.getUser();
+  
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} min-h-screen bg-background`}>
         <Providers>
           <div className="min-h-screen flex flex-col">
-            <Header />
+            <Header user={user} />
             <main className="flex-1">
               {children}
             </main>

@@ -590,10 +590,28 @@ export type Tag = Database['public']['Tables']['tags']['Row'];
 export type TagInsert = Database['public']['Tables']['tags']['Insert'];
 export type TagUpdate = Database['public']['Tables']['tags']['Update'];
 
-// Add other table types as needed, e.g.:
-// export type Profile = Database['public']['Tables']['profiles']['Row'];
-// export type Luxicle = Database['public']['Tables']['luxicles']['Row'];
-// export type Submission = Database['public']['Tables']['submissions']['Row'];
+// User and Profile types
+export type User = Database['public']['Tables']['users']['Row'];
+export type UserInsert = Database['public']['Tables']['users']['Insert'];
+export type UserUpdate = Database['public']['Tables']['users']['Update'];
+
+// UserProfile is an alias for User to maintain compatibility with existing code
+export type UserProfile = User;
+
+// Luxicle types
+export type Luxicle = Database['public']['Tables']['luxicles']['Row'];
+export type LuxicleInsert = Database['public']['Tables']['luxicles']['Insert'];
+export type LuxicleUpdate = Database['public']['Tables']['luxicles']['Update'];
+
+// LuxicleItem types
+export type LuxicleItem = Database['public']['Tables']['luxicle_items']['Row'];
+export type LuxicleItemInsert = Database['public']['Tables']['luxicle_items']['Insert'];
+export type LuxicleItemUpdate = Database['public']['Tables']['luxicle_items']['Update'];
+
+// Follow types
+export type Follow = Database['public']['Tables']['follows']['Row'];
+export type FollowInsert = Database['public']['Tables']['follows']['Insert'];
+export type FollowUpdate = Database['public']['Tables']['follows']['Update'];
 
 export const Constants = {
   public: {

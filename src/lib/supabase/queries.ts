@@ -1,8 +1,7 @@
 import { createSupabaseBrowserClient } from './client';
-import { createSupabaseServerClient } from './server';
-import { cookies } from 'next/headers';
 import type { Database } from './types';
-import type { User as AuthUser } from '@supabase/supabase-js';
+import type { UserProfile, Follow } from './types';
+import type { User as AuthUser, SupabaseClient } from '@supabase/supabase-js';
 import type {
   Category,
   Tag,
@@ -21,102 +20,72 @@ import type {
 // Import SearchParams type as AppSearchParams to avoid conflict
 import type { SearchParams as AppSearchParams } from '@/types';
 
-// Types for query functions
-type GetUserProfileParams = {
-  userId?: string;
-  username?: string;
-};
-
-type UpdateUserProfileParams = {
-  userId: string;
-  data: {
-    username?: string;
-    display_name?: string;
-    bio?: string;
-    location?: string;
-    avatar_url?: string;
-    cover_url?: string;
-    website_url?: string;
-    twitter_handle?: string;
-    instagram_handle?: string;
-  };
-};
-
-type GetChallengesParams = {
-  categoryId?: string;
-  tagIds?: string[];
-  searchQuery?: string;
-  featured?: boolean;
-  active?: boolean;
-  limit?: number;
-  offset?: number;
-};
-
-type CreateLuxicleParams = {
-  userId: string;
-  challengeId: string;
-  title: string;
-  description?: string;
-  categoryId?: string;
-  tagIds?: string[];
-  isPublished?: boolean;
-  items: Array<{
-    position: number;
-    title: string;
-    description?: string;
-    media_url?: string;
-    embed_provider?: string;
-    embed_data?: any;
-  }>;
-};
-
-type UpdateLuxicleParams = {
-  luxicleId: string;
-  userId: string; // For authorization check
-  data: {
-    title?: string;
-    description?: string;
-    categoryId?: string;
-    isPublished?: boolean;
-  };
-};
-
-type SearchParams = {
-  query: string;
-  limit?: number;
-  offset?: number;
-};
+// Import query types from our new separate type file
+import type {
+  GetUserProfileParams,
+  UpdateUserProfileParams,
+  GetChallengesParams,
+  CreateLuxicleParams,
+  UpdateLuxicleParams,
+  SearchParams
+} from './query-types';
 
 // User Profile Functions
-export async function getUserProfile({ userId, username }: GetUserProfileParams) {
-  const supabase = createSupabaseBrowserClient();
+export async function getUserProfile(
+  supabaseClient: SupabaseClient,
+  userId: string
+): Promise<UserProfile> {
+  if (!userId) {
+    throw new Error('userId must be provided');
+  }
   
-  let query = supabase
+  const { data, error } = await supabaseClient
     .from('users')
     .select(`
       *,
       followers:follows!follower_id(count),
       following:follows!followee_id(count)
-    `);
-    
-  if (userId) {
-    query = query.eq('id', userId);
-  } else if (username) {
-    query = query.eq('username', username);
-  } else {
-    throw new Error('Either userId or username must be provided');
-  }
-  
-  const { data, error } = await query.single();
+    `)
+    .eq('id', userId)
+    .single();
   
   if (error) throw error;
-  return data;
+  return data as UserProfile;
 }
 
-export async function updateUserProfile({ userId, data }: UpdateUserProfileParams) {
-  const supabase = createSupabaseBrowserClient();
+export async function getUserProfileByUsername(
+  supabaseClient: SupabaseClient,
+  username: string
+): Promise<UserProfile | null> {
+  if (!username) {
+    throw new Error('username must be provided');
+  }
   
-  const { data: updatedUser, error } = await supabase
+  const { data, error } = await supabaseClient
+    .from('users')
+    .select(`
+      *,
+      followers:follows!follower_id(count),
+      following:follows!followee_id(count)
+    `)
+    .eq('username', username)
+    .single();
+  
+  if (error) {
+    if (error.code === 'PGRST116') { // Record not found
+      return null;
+    }
+    throw error;
+  }
+  return data as UserProfile;
+}
+
+export async function updateUserProfile(
+  supabaseClient: SupabaseClient,
+  userId: string,
+  data: Partial<UserProfile>
+): Promise<UserProfile> {
+  const { data: updatedUser, error } = await supabaseClient
     .from('users')
     .update(data)
     .eq('id', userId)
@@ -124,7 +93,7 @@ export async function updateUserProfile({ userId, data }: UpdateUserProfileParam
     .single();
     
   if (error) throw error;
-  return updatedUser;
+  return updatedUser as UserProfile;
 }
 
 // Challenge Functions
@@ -353,73 +322,4 @@ export async function searchUsers({ query, limit = 10, offset = 0 }: SearchParam
   return data;
 }
 
-// Server-side functions (for use in Server Components or API routes)
-export async function getUserProfileServer({ userId, username }: GetUserProfileParams) {
-  // In Next.js App Router, cookies() returns a ReadonlyRequestCookies object, not a Promise
-  const cookieStore = cookies();
-  const supabase = createSupabaseServerClient(cookieStore as any);
-  
-  let query = supabase
-    .from('users')
-    .select(`
-      *,
-      followers:follows!follower_id(count),
-      following:follows!followee_id(count)
-    `);
-    
-  if (userId) {
-    query = query.eq('id', userId);
-  } else if (username) {
-    query = query.eq('username', username);
-  } else {
-    throw new Error('Either userId or username must be provided');
-  }
-  
-  const { data, error } = await query.single();
-  
-  if (error) throw error;
-  return data;
-}
-
-export async function getChallengesServer(params: GetChallengesParams = {}) {
-  // In Next.js App Router, cookies() returns a ReadonlyRequestCookies object, not a Promise
-  const cookieStore = cookies();
-  const supabase = createSupabaseServerClient(cookieStore as any);
-  
-  // Implementation similar to getChallenges but for server context
-  const { categoryId, tagIds, searchQuery, featured, active, limit = 10, offset = 0 } = params;
-  
-  let query = supabase
-    .from('challenges')
-    .select(`
-      *,
-      category:categories(*),
-      tags:challenge_tags(tag:tags(*))
-    `)
-    .order('opens_at', { ascending: false })
-    .range(offset, offset + limit - 1);
-    
-  if (categoryId) {
-    query = query.eq('category_id', categoryId);
-  }
-  
-  if (featured !== undefined) {
-    query = query.eq('is_featured', featured);
-  }
-  
-  if (active) {
-    const now = new Date().toISOString();
-    query = query
-      .lte('opens_at', now)
-      .or(`closes_at.gt.${now},closes_at.is.null`);
-  }
-  
-  if (searchQuery) {
-    query = query.ilike('title', `%${searchQuery}%`);
-  }
-  
-  const { data, error } = await query;
-  
-  if (error) throw error;
-  return data;
-}
+// Server components should import server-side functions from './server-queries'

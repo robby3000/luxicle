@@ -33,20 +33,52 @@ export function createSupabaseServerClient(cookieStoreInstance: Awaited<ReturnTy
           return cookieStoreInstance.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
-          if (typeof cookieStoreInstance?.set !== 'function') {
-            console.error('cookieStoreInstance.set is not a function or cookieStoreInstance is undefined. Name:', name);
-            return;
+          try {
+            if (typeof cookieStoreInstance?.set !== 'function') {
+              console.error('cookieStoreInstance.set is not a function or cookieStoreInstance is undefined. Name:', name);
+              return;
+            }
+            
+            // Safely attempt to set the cookie, but catch any errors from the Next.js API
+            // This ensures we gracefully handle cookie operations in various contexts
+            try {
+              cookieStoreInstance.set(name, value, options);
+            } catch (err: any) {
+              // If the error is related to cookies being immutable, log a helpful message
+              if (err?.message?.includes('immutable')) {
+                console.warn(`Cannot set cookie '${name}' - cookies are immutable in this context. Use Server Actions or Route Handlers to modify cookies.`);
+              } else {
+                throw err; // Re-throw unexpected errors
+              }
+            }
+          } catch (error) {
+            console.error(`Error setting cookie '${name}':`, error);
+            // Continue execution rather than crashing
           }
-          cookieStoreInstance.set(name, value, options);
         },
         remove(name: string, options: CookieOptions) {
-          if (typeof cookieStoreInstance?.delete !== 'function') {
-            console.error('cookieStoreInstance.delete is not a function or cookieStoreInstance is undefined. Name:', name);
-            return;
+          try {
+            if (typeof cookieStoreInstance?.delete !== 'function') {
+              console.error('cookieStoreInstance.delete is not a function or cookieStoreInstance is undefined. Name:', name);
+              return;
+            }
+            
+            // Safely attempt to delete the cookie, but catch any errors from the Next.js API
+            try {
+              // Adapt to Next.js ResponseCookies delete method which can take an object with name and options
+              cookieStoreInstance.delete({ name, ...options });
+            } catch (err: any) {
+              // If the error is related to cookies being immutable, log a helpful message
+              if (err?.message?.includes('immutable')) {
+                console.warn(`Cannot delete cookie '${name}' - cookies are immutable in this context. Use Server Actions or Route Handlers to modify cookies.`);
+              } else {
+                throw err; // Re-throw unexpected errors
+              }
+            }
+          } catch (error) {
+            console.error(`Error removing cookie '${name}':`, error);
+            // Continue execution rather than crashing
           }
-          // Adapt to Next.js ResponseCookies delete method which can take an object with name and options
-          // Supabase's CookieOptions should be compatible for spreading here.
-          cookieStoreInstance.delete({ name, ...options });
         },
       },
     }
