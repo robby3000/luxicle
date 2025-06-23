@@ -1,4 +1,5 @@
 import { useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'; // Corrected import
 import { useAuthStore } from '@/stores/authStore';
 import { AuthError } from '@supabase/supabase-js';
@@ -7,6 +8,7 @@ import type { User, Session, SignInWithPasswordCredentials, SignUpWithPasswordCr
 const supabase = createSupabaseBrowserClient(); // Initialize client
 
 export const useAuth = () => {
+  const router = useRouter();
   const {
     user,
     session,
@@ -26,6 +28,8 @@ export const useAuth = () => {
         const currentUser = session?.user ?? null;
         setUserAndSession(currentUser, session);
         setLoading(false);
+        // This refresh is crucial for synchronizing server components with the new auth state.
+        router.refresh();
       }
     );
 
@@ -143,6 +147,7 @@ export const useAuth = () => {
       const { error: signOutError } = await supabase.auth.signOut();
       if (signOutError) throw signOutError;
       clearAuth(); // onAuthStateChange will also fire, but good to be explicit
+      router.refresh();
     } catch (e: any) {
       setError(e);
     } finally {

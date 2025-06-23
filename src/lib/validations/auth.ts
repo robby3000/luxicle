@@ -31,6 +31,7 @@ export const registerSchema = z.object({
 
 // Type aliases for form data, inferred from schemas
 export type LoginFormData = z.infer<typeof loginSchema>;
+
 export type RegisterFormData = z.infer<typeof registerSchema>;
 
 // Schema for forgot password

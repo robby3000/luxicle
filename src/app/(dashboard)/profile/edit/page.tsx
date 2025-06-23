@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getUserProfile } from "@/lib/supabase/queries";
@@ -11,7 +12,8 @@ export const metadata: Metadata = {
 };
 
 export default async function EditProfilePage() {
-  const supabase = createSupabaseServerClient();
+  const cookieStore = await cookies();
+  const supabase = createSupabaseServerClient(cookieStore);
   const { data: { user } } = await supabase.auth.getUser();
   
   if (!user) {
